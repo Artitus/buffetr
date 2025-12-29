@@ -1,38 +1,26 @@
 import { NextResponse } from "next/server";
+import { getMetrics } from "@/lib/supabase";
 
 export const runtime = "edge";
 
 export async function GET() {
-  const apiKey = process.env.FRED_API_KEY;
-  
-  if (!apiKey) {
-    return NextResponse.json({ error: "FRED_API_KEY not set", hasKey: false });
+  // Check database
+  try {
+    const data = await getMetrics("buffett_indicator", 10);
+    return NextResponse.json({
+      dbConnected: true,
+      recordCount: data.length,
+      sample: data.slice(0, 3),
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "not set",
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "not set",
+    });
+  } catch (error) {
+    return NextResponse.json({
+      dbConnected: false,
+      error: String(error),
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? "set" : "not set",
+      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "set" : "not set",
+    });
   }
-
-  // Try series IDs - including pre-calculated Buffett Indicator
-  const seriesIds = [
-    "DDDM01USA156NWDB", // Stock Market Cap to GDP (Buffett Indicator!)
-    "NCBEILQ027S",      // Corporate Equities Market Value
-    "GDP",              // GDP
-    "SP500",            // S&P 500
-  ];
-  const results: Record<string, unknown> = {};
-
-  for (const seriesId of seriesIds) {
-    try {
-      const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&limit=3&sort_order=desc`;
-      const response = await fetch(url);
-      const data = await response.json();
-      results[seriesId] = {
-        status: response.status,
-        hasData: data.observations?.length > 0,
-        sample: data.observations?.[0],
-      };
-    } catch (error) {
-      results[seriesId] = { error: String(error) };
-    }
-  }
-
-  return NextResponse.json({ results });
 }
 
