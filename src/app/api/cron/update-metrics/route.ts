@@ -31,12 +31,15 @@ export async function GET(request: Request) {
 
   try {
     // Fetch ALL Buffett Indicator data from FRED (10+ years)
+    console.log("Fetching Buffett Indicator data...");
     const buffettData = await fetchBuffettIndicatorData();
+    console.log("Fetched data count:", buffettData.length);
     
     if (buffettData.length === 0) {
       return NextResponse.json({
         success: false,
         error: "No data fetched from FRED. Check FRED_API_KEY.",
+        debug: { hasApiKey: !!process.env.FRED_API_KEY },
       }, { status: 500 });
     }
 

@@ -48,6 +48,7 @@ export async function fetchFredSeries(
   limit: number = 10000 // 10+ years of daily data
 ): Promise<Array<{ date: string; value: number }>> {
   const apiKey = process.env.FRED_API_KEY;
+  console.log("FRED API Key present:", !!apiKey, "length:", apiKey?.length);
   if (!apiKey) {
     console.error("FRED_API_KEY not configured");
     return [];
@@ -92,7 +93,9 @@ export async function fetchBuffettIndicatorData(): Promise<
   Array<{ date: string; ratio: number }>
 > {
   // Use the pre-calculated Buffett Indicator from FRED
+  console.log("Fetching series:", FRED_SERIES.BUFFETT_INDICATOR);
   const data = await fetchFredSeries(FRED_SERIES.BUFFETT_INDICATOR);
+  console.log("Raw data length:", data.length);
   
   return data.map((d) => ({
     date: d.date,
