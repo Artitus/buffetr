@@ -401,90 +401,72 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        {/* Secondary Metrics Row */}
-        <Grid numItemsSm={2} numItemsLg={4} className="gap-4 mb-6">
+        {/* Secondary Metrics Row - Compact */}
+        <div className="flex flex-wrap gap-3 mb-6">
           {/* Fear & Greed */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-2">
-              <Gauge className="w-4 h-4 text-primary" />
-              <Text className="font-medium">Fear & Greed</Text>
-              <InfoTooltip content={TOOLTIPS.fearGreed} />
-            </Flex>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{getFearGreedEmoji(latestFearGreed.value)}</span>
-              <Metric className="text-2xl">{latestFearGreed.value}</Metric>
-            </div>
-            <ProgressBar 
-              value={latestFearGreed.value} 
-              color={getFearGreedColor(latestFearGreed.value) as "red" | "orange" | "yellow" | "emerald"}
-              className="h-2 mt-2"
-            />
-          </Card>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <span className="text-lg">{getFearGreedEmoji(latestFearGreed.value)}</span>
+            <span className="text-sm font-medium text-muted-foreground">Fear/Greed</span>
+            <span className="text-sm font-bold">{latestFearGreed.value}</span>
+          </div>
 
           {/* S&P 500 */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-chart-5/10">
-                <TrendingUp className="w-4 h-4 text-chart-5" />
-              </div>
-              <Text className="font-medium">S&P 500</Text>
-              <InfoTooltip content={TOOLTIPS.sp500} />
-            </Flex>
-            <Metric className="text-2xl">{latestSP500.toFixed(0)}</Metric>
-          </Card>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <TrendingUp className="w-4 h-4 text-chart-5" />
+            <span className="text-sm font-medium text-muted-foreground">S&P 500</span>
+            <span className="text-sm font-bold">{latestSP500.toFixed(0)}</span>
+          </div>
 
           {/* VIX */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-red-100">
-                <Activity className="w-4 h-4 text-red-500" />
-              </div>
-              <Text className="font-medium">VIX</Text>
-              <InfoTooltip content={TOOLTIPS.vix} />
-            </Flex>
-            <Metric className="text-2xl">{latestVix.toFixed(1)}</Metric>
-            <Badge color={latestVix > 30 ? "red" : latestVix > 20 ? "orange" : "emerald"} size="sm" className="mt-1">
-              {latestVix > 30 ? "High Fear" : latestVix > 20 ? "Elevated" : "Low"}
-            </Badge>
-          </Card>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <Activity className="w-4 h-4 text-red-500" />
+            <span className="text-sm font-medium text-muted-foreground">VIX</span>
+            <span className={`text-sm font-bold ${latestVix > 20 ? "text-red-500" : "text-emerald-500"}`}>
+              {latestVix.toFixed(1)}
+            </span>
+          </div>
 
           {/* Yield Curve */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-purple-100">
-                <ArrowUpDown className="w-4 h-4 text-purple-500" />
-              </div>
-              <Text className="font-medium">Yield Curve</Text>
-              <InfoTooltip content={TOOLTIPS.yieldCurve} />
-            </Flex>
-            <Metric className="text-2xl">{latestYieldSpread.toFixed(2)}%</Metric>
-            <Badge color={latestYieldSpread < 0 ? "red" : "emerald"} size="sm" className="mt-1">
-              {latestYieldSpread < 0 ? "Inverted ⚠️" : "Normal"}
-            </Badge>
-          </Card>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <ArrowUpDown className="w-4 h-4 text-purple-500" />
+            <span className="text-sm font-medium text-muted-foreground">Yield</span>
+            <span className={`text-sm font-bold ${latestYieldSpread < 0 ? "text-red-500" : "text-emerald-500"}`}>
+              {latestYieldSpread.toFixed(2)}%
+            </span>
+            {latestYieldSpread < 0 && <span className="text-xs">⚠️</span>}
+          </div>
 
           {/* Bitcoin */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-orange-100">
-                <Bitcoin className="w-4 h-4 text-orange-500" />
-              </div>
-              <Text className="font-medium">Bitcoin</Text>
-              <InfoTooltip content={TOOLTIPS.bitcoin} />
-            </Flex>
-            <Metric className="text-2xl">{formatCurrency(data.bitcoin.price)}</Metric>
-            <Flex alignItems="center" className="mt-1 gap-1">
-              {data.bitcoin.change24h >= 0 ? (
-                <TrendingUp className="w-3 h-3 text-emerald-500" />
-              ) : (
-                <TrendingDown className="w-3 h-3 text-red-500" />
-              )}
-              <Text className={data.bitcoin.change24h >= 0 ? "text-emerald-600 text-sm" : "text-red-600 text-sm"}>
-                {data.bitcoin.change24h >= 0 ? "+" : ""}{data.bitcoin.change24h.toFixed(1)}%
-              </Text>
-            </Flex>
-          </Card>
-        </Grid>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <Bitcoin className="w-4 h-4 text-orange-500" />
+            <span className="text-sm font-medium text-muted-foreground">BTC</span>
+            <span className="text-sm font-bold">{formatCurrency(data.bitcoin.price)}</span>
+            <span className={`text-xs ${data.bitcoin.change24h >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {data.bitcoin.change24h >= 0 ? "+" : ""}{data.bitcoin.change24h.toFixed(1)}%
+            </span>
+          </div>
+
+          {/* Gold */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <Coins className="w-4 h-4 text-amber-500" />
+            <span className="text-sm font-medium text-muted-foreground">Gold</span>
+            <span className="text-sm font-bold">{formatCurrency(latestGold)}</span>
+          </div>
+
+          {/* Silver */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <Coins className="w-4 h-4 text-slate-400" />
+            <span className="text-sm font-medium text-muted-foreground">Silver</span>
+            <span className="text-sm font-bold">${latestSilver.toFixed(2)}</span>
+          </div>
+
+          {/* Mortgage */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border hover-lift">
+            <Home className="w-4 h-4 text-cyan-500" />
+            <span className="text-sm font-medium text-muted-foreground">30Y Rate</span>
+            <span className="text-sm font-bold">{latestMortgage.toFixed(2)}%</span>
+          </div>
+        </div>
 
         {/* Charts Section */}
         <Grid numItemsMd={2} className="gap-6 mb-6">
