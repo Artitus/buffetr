@@ -50,10 +50,10 @@ export async function GET(request: Request) {
       recorded_at: new Date(d.date),
     }));
 
-    const success = await bulkUpsertMetrics(metrics);
+    await bulkUpsertMetrics(metrics);
 
     return NextResponse.json({
-      success,
+      success: true,
       message: `Stored ${metrics.length} Buffett Indicator data points`,
       count: metrics.length,
       timestamp: new Date().toISOString(),
