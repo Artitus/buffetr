@@ -45,7 +45,7 @@ export async function fetchFredSeries(
   seriesId: string,
   startDate?: string,
   endDate?: string,
-  limit: number = 365
+  limit: number = 10000 // 10+ years of daily data
 ): Promise<Array<{ date: string; value: number }>> {
   const apiKey = process.env.FRED_API_KEY;
   if (!apiKey) {
@@ -57,7 +57,7 @@ export async function fetchFredSeries(
     series_id: seriesId,
     api_key: apiKey,
     file_type: "json",
-    sort_order: "desc",
+    sort_order: "asc", // Oldest first for proper charting
     limit: limit.toString(),
   });
 

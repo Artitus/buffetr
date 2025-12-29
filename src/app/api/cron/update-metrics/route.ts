@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { bulkUpsertMetrics, type MetricType } from "@/lib/supabase";
-import {
-  fetchBuffettIndicatorData,
-  fetchMortgageRate,
-  fetchHomePriceIndex,
-  fetchSP500,
-  fetchMetalsPrices,
-} from "@/lib/data-sources";
+import { fetchBuffettIndicatorData } from "@/lib/data-sources";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -35,109 +29,31 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const results: Record<string, { success: boolean; count: number; error?: string }> = {};
-
   try {
-    // Fetch and store Buffett Indicator data
+    // Fetch ALL Buffett Indicator data from FRED (10+ years)
     const buffettData = await fetchBuffettIndicatorData();
-    if (buffettData.length > 0) {
-      const metrics = buffettData.slice(0, 30).map((d) => ({
-        metric_type: "buffett_indicator" as MetricType,
-        value: d.ratio,
-        recorded_at: new Date(d.date),
-        metadata: { marketCap: d.marketCap, gdp: d.gdp },
-      }));
-
-      // Also store market cap and GDP separately
-      const marketCapMetrics = buffettData.slice(0, 30).map((d) => ({
-        metric_type: "market_cap" as MetricType,
-        value: d.marketCap,
-        recorded_at: new Date(d.date),
-      }));
-
-      const gdpMetrics = buffettData.slice(0, 30).map((d) => ({
-        metric_type: "gdp" as MetricType,
-        value: d.gdp,
-        recorded_at: new Date(d.date),
-      }));
-
-      const success = await bulkUpsertMetrics([
-        ...metrics,
-        ...marketCapMetrics,
-        ...gdpMetrics,
-      ]);
-      results.buffett = { success, count: metrics.length };
-    } else {
-      results.buffett = { success: false, count: 0, error: "No data fetched" };
+    
+    if (buffettData.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: "No data fetched from FRED. Check FRED_API_KEY.",
+      }, { status: 500 });
     }
 
-    // Fetch and store mortgage rate
-    const mortgageData = await fetchMortgageRate();
-    if (mortgageData.length > 0) {
-      const metrics = mortgageData.slice(0, 52).map((d) => ({
-        metric_type: "mortgage_rate" as MetricType,
-        value: d.value,
-        recorded_at: new Date(d.date),
-      }));
-      const success = await bulkUpsertMetrics(metrics);
-      results.mortgage = { success, count: metrics.length };
-    } else {
-      results.mortgage = { success: false, count: 0, error: "No data fetched" };
-    }
+    // Store ALL data points
+    const metrics = buffettData.map((d) => ({
+      metric_type: "buffett_indicator" as MetricType,
+      value: d.ratio,
+      recorded_at: new Date(d.date),
+      metadata: { marketCap: d.marketCap, gdp: d.gdp },
+    }));
 
-    // Fetch and store home price index
-    const homePriceData = await fetchHomePriceIndex();
-    if (homePriceData.length > 0) {
-      const metrics = homePriceData.slice(0, 36).map((d) => ({
-        metric_type: "home_price_index" as MetricType,
-        value: d.value,
-        recorded_at: new Date(d.date),
-      }));
-      const success = await bulkUpsertMetrics(metrics);
-      results.homePrice = { success, count: metrics.length };
-    } else {
-      results.homePrice = { success: false, count: 0, error: "No data fetched" };
-    }
-
-    // Fetch and store S&P 500
-    const sp500Data = await fetchSP500();
-    if (sp500Data.length > 0) {
-      const metrics = sp500Data.slice(0, 30).map((d) => ({
-        metric_type: "sp500" as MetricType,
-        value: d.value,
-        recorded_at: new Date(d.date),
-      }));
-      const success = await bulkUpsertMetrics(metrics);
-      results.sp500 = { success, count: metrics.length };
-    } else {
-      results.sp500 = { success: false, count: 0, error: "No data fetched" };
-    }
-
-    // Fetch and store metals prices
-    const metalsData = await fetchMetalsPrices();
-    if (metalsData) {
-      const metrics = [
-        {
-          metric_type: "gold" as MetricType,
-          value: metalsData.gold,
-          recorded_at: metalsData.timestamp,
-        },
-        {
-          metric_type: "silver" as MetricType,
-          value: metalsData.silver,
-          recorded_at: metalsData.timestamp,
-        },
-      ];
-      const success = await bulkUpsertMetrics(metrics);
-      results.metals = { success, count: 2 };
-    } else {
-      results.metals = { success: false, count: 0, error: "No data fetched" };
-    }
+    const success = await bulkUpsertMetrics(metrics);
 
     return NextResponse.json({
-      success: true,
-      message: "Metrics updated successfully",
-      results,
+      success,
+      message: `Stored ${metrics.length} Buffett Indicator data points`,
+      count: metrics.length,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -146,10 +62,8 @@ export async function GET(request: Request) {
       {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-        results,
       },
       { status: 500 }
     );
   }
 }
-
