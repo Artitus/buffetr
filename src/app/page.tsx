@@ -337,59 +337,42 @@ export default function Dashboard() {
           </Flex>
         </header>
 
-        {/* Hero Section - Fear & Greed + Buffett */}
-        <Grid numItemsMd={2} className="gap-6 mb-6">
-          {/* Fear & Greed Index */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-3">
-              <Gauge className="w-5 h-5 text-primary" />
-              <Title>Fear & Greed Index</Title>
-              <InfoTooltip content={TOOLTIPS.fearGreed} />
+        {/* HERO: Buffett Indicator - Full Width */}
+        <Card className="mb-8 hover-lift overflow-hidden">
+          <div className="p-2 sm:p-4">
+            {/* Hero Header */}
+            <Flex justifyContent="between" alignItems="start" className="flex-col lg:flex-row gap-4 mb-6">
+              <div>
+                <Flex alignItems="center" className="gap-3 mb-2">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/70">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <Title className="text-2xl sm:text-3xl">Warren Buffett Indicator</Title>
+                    <Text className="text-muted-foreground">
+                      Total US Stock Market Cap / GDP
+                      <InfoTooltip content={TOOLTIPS.buffett} />
+                    </Text>
+                  </div>
+                </Flex>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="flex items-baseline gap-3 justify-end">
+                    <Metric className="text-5xl sm:text-6xl lg:text-7xl font-bold">{latestBuffett.toFixed(0)}%</Metric>
+                    <span className="text-4xl sm:text-5xl">{buffettStatus.emoji}</span>
+                  </div>
+                  <Badge color={buffettStatus.color} size="xl" className="mt-2">
+                    {buffettStatus.label}
+                  </Badge>
+                </div>
+              </div>
             </Flex>
-            
-            <div className="text-center py-4">
-              <div className="text-6xl mb-2">{getFearGreedEmoji(latestFearGreed.value)}</div>
-              <Metric className="text-5xl font-bold">{latestFearGreed.value}</Metric>
-              <Badge 
-                color={getFearGreedColor(latestFearGreed.value) as "red" | "orange" | "yellow" | "emerald"} 
-                size="lg" 
-                className="mt-2"
-              >
-                {latestFearGreed.classification}
-              </Badge>
-            </div>
-            
-            <div className="mt-4">
-              <Flex justifyContent="between" className="mb-1">
-                <Text className="text-xs text-muted-foreground">Extreme Fear</Text>
-                <Text className="text-xs text-muted-foreground">Extreme Greed</Text>
-              </Flex>
-              <ProgressBar 
-                value={latestFearGreed.value} 
-                color={getFearGreedColor(latestFearGreed.value) as "red" | "orange" | "yellow" | "emerald"}
-                className="h-3"
-              />
-            </div>
-          </Card>
 
-          {/* Buffett Indicator */}
-          <Card className="hover-lift">
-            <Flex alignItems="center" className="gap-2 mb-3">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <Title>Buffett Indicator</Title>
-              <InfoTooltip content={TOOLTIPS.buffett} />
-            </Flex>
-            
-            <div className="flex items-baseline gap-3 mb-2">
-              <Metric className="text-5xl font-bold">{latestBuffett.toFixed(0)}%</Metric>
-              <span className="text-3xl">{buffettStatus.emoji}</span>
-            </div>
-            <Badge color={buffettStatus.color} size="lg">
-              {buffettStatus.label}
-            </Badge>
-            
+            {/* Main Chart - Full Width */}
             <AreaChart
-              className="h-32 mt-4"
+              className="h-64 sm:h-80 lg:h-96"
               data={buffettChartData}
               index="date"
               categories={["Market to GDP"]}
@@ -398,13 +381,46 @@ export default function Dashboard() {
               showLegend={false}
               showAnimation
               curveType="monotone"
-              showYAxis={false}
+              showGridLines={true}
+            />
+
+            {/* Valuation Scale */}
+            <div className="mt-6 p-4 rounded-xl bg-secondary/30">
+              <Text className="font-medium mb-3">Market Valuation Scale</Text>
+              <div className="flex flex-wrap gap-3">
+                <Badge color="emerald" size="sm">{"<75% Undervalued"}</Badge>
+                <Badge color="yellow" size="sm">75-100% Fair Value</Badge>
+                <Badge color="orange" size="sm">100-140% Overvalued</Badge>
+                <Badge color="red" size="sm">{">140% Very Overvalued"}</Badge>
+              </div>
+              <Text className="text-muted-foreground text-sm mt-3">
+                Warren Buffett called this &quot;probably the best single measure of where valuations stand at any given moment.&quot;
+                A reading above 100% historically suggests the market may be overvalued relative to the economy.
+              </Text>
+            </div>
+          </div>
+        </Card>
+
+        {/* Secondary Metrics Row */}
+        <Grid numItemsSm={2} numItemsLg={4} className="gap-4 mb-6">
+          {/* Fear & Greed */}
+          <Card className="hover-lift">
+            <Flex alignItems="center" className="gap-2 mb-2">
+              <Gauge className="w-4 h-4 text-primary" />
+              <Text className="font-medium">Fear & Greed</Text>
+              <InfoTooltip content={TOOLTIPS.fearGreed} />
+            </Flex>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{getFearGreedEmoji(latestFearGreed.value)}</span>
+              <Metric className="text-2xl">{latestFearGreed.value}</Metric>
+            </div>
+            <ProgressBar 
+              value={latestFearGreed.value} 
+              color={getFearGreedColor(latestFearGreed.value) as "red" | "orange" | "yellow" | "emerald"}
+              className="h-2 mt-2"
             />
           </Card>
-        </Grid>
 
-        {/* Market Overview */}
-        <Grid numItemsSm={2} numItemsLg={4} className="gap-4 mb-6">
           {/* S&P 500 */}
           <Card className="hover-lift">
             <Flex alignItems="center" className="gap-2 mb-2">
