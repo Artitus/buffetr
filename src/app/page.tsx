@@ -166,7 +166,6 @@ export default function Dashboard() {
   const [data, setData] = useState<MetricsData>(MOCK_DATA);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [useMockData, setUseMockData] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>("1Y");
   const dashboardRef = useRef<HTMLDivElement>(null);
 
@@ -212,17 +211,14 @@ export default function Dashboard() {
             value: d.value,
           })) || MOCK_DATA.homePriceIndex,
         });
-        setUseMockData(false);
       } else {
         setData(MOCK_DATA);
-        setUseMockData(true);
       }
 
       setLastUpdated(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
       setData(MOCK_DATA);
-      setUseMockData(true);
     } finally {
       setIsLoading(false);
     }
@@ -311,11 +307,6 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3 flex-wrap justify-center">
-              {useMockData && (
-                <Badge color="amber" size="sm" className="font-medium">
-                  ✨ Demo Mode
-                </Badge>
-              )}
               <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
               {lastUpdated && (
                 <span className="text-muted-foreground text-sm hidden md:inline">

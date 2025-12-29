@@ -54,24 +54,26 @@ export function filterDataByTimeRange<T extends { date: string }>(
 
   switch (range) {
     case "1M":
-      cutoffDate = new Date(now.setMonth(now.getMonth() - 1));
+      cutoffDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       break;
     case "3M":
-      cutoffDate = new Date(now.setMonth(now.getMonth() - 3));
+      cutoffDate = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
       break;
     case "1Y":
-      cutoffDate = new Date(now.setFullYear(now.getFullYear() - 1));
+      cutoffDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
       break;
     case "5Y":
-      cutoffDate = new Date(now.setFullYear(now.getFullYear() - 5));
+      cutoffDate = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
       break;
     case "10Y":
-      cutoffDate = new Date(now.setFullYear(now.getFullYear() - 10));
+      cutoffDate = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
       break;
     default:
       return data;
   }
 
-  return data.filter((item) => new Date(item.date) >= cutoffDate);
+  const filtered = data.filter((item) => new Date(item.date) >= cutoffDate);
+  
+  // Return at least some data if filter is too aggressive
+  return filtered.length > 0 ? filtered : data.slice(-30);
 }
-
