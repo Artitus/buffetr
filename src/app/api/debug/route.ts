@@ -9,8 +9,13 @@ export async function GET() {
     return NextResponse.json({ error: "FRED_API_KEY not set", hasKey: false });
   }
 
-  // Try multiple Wilshire 5000 series IDs to find the correct one
-  const seriesIds = ["WILL5000PR", "WILL5000IND", "WILL5000INDFC", "WILRESPR"];
+  // Try series IDs - including pre-calculated Buffett Indicator
+  const seriesIds = [
+    "DDDM01USA156NWDB", // Stock Market Cap to GDP (Buffett Indicator!)
+    "NCBEILQ027S",      // Corporate Equities Market Value
+    "GDP",              // GDP
+    "SP500",            // S&P 500
+  ];
   const results: Record<string, unknown> = {};
 
   for (const seriesId of seriesIds) {
