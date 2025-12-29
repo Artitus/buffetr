@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Nunito, DM_Sans } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Buffetr | Warren Buffett Indicator & Market Analytics",
+  title: "Buffetr | Your Friendly Market Dashboard 📈",
   description:
-    "Track the Warren Buffett Indicator, precious metals prices, housing market data, and key financial metrics in real-time.",
+    "Track the Warren Buffett Indicator, precious metals prices, housing market data, and key financial metrics - made simple and beautiful.",
   keywords: [
     "Warren Buffett Indicator",
     "market cap to GDP",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Buffetr" }],
   openGraph: {
-    title: "Buffetr | Warren Buffett Indicator & Market Analytics",
+    title: "Buffetr | Your Friendly Market Dashboard 📈",
     description:
       "Track market valuations, precious metals, and housing data in one beautiful dashboard.",
     type: "website",
@@ -43,9 +43,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${nunito.variable} ${dmSans.variable} font-sans antialiased`}
       >
         {children}
       </body>
