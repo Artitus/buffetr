@@ -45,7 +45,6 @@ export async function GET(request: Request) {
       metric_type: "buffett_indicator" as MetricType,
       value: d.ratio,
       recorded_at: new Date(d.date),
-      metadata: { marketCap: d.marketCap, gdp: d.gdp },
     }));
 
     const success = await bulkUpsertMetrics(metrics);

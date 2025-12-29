@@ -20,7 +20,7 @@ interface FredSeriesResponse {
 // FRED Series IDs
 export const FRED_SERIES = {
   // Market Indicators
-  WILSHIRE_5000: "WILL5000PRFC", // Total Market Cap (Price Index)
+  BUFFETT_INDICATOR: "DDDM01USA156NWDB", // Stock Market Cap to GDP (pre-calculated!)
   GDP: "GDP", // Gross Domestic Product
   SP500: "SP500", // S&P 500 Index
   VIX: "VIXCLS", // CBOE Volatility Index
@@ -89,52 +89,15 @@ export async function fetchFredSeries(
 }
 
 export async function fetchBuffettIndicatorData(): Promise<
-  Array<{ date: string; marketCap: number; gdp: number; ratio: number }>
+  Array<{ date: string; ratio: number }>
 > {
-  const [marketCapData, gdpData] = await Promise.all([
-    fetchFredSeries(FRED_SERIES.WILSHIRE_5000),
-    fetchFredSeries(FRED_SERIES.GDP),
-  ]);
-
-  if (!marketCapData.length || !gdpData.length) {
-    return [];
-  }
-
-  const gdpMap = new Map<string, number>();
-  gdpData.forEach((obs) => {
-    gdpMap.set(obs.date, obs.value);
-  });
-
-  const results: Array<{
-    date: string;
-    marketCap: number;
-    gdp: number;
-    ratio: number;
-  }> = [];
-
-  const gdpDates = Array.from(gdpMap.keys()).sort();
-
-  for (const mcObs of marketCapData) {
-    let nearestGdp: number | null = null;
-    for (let i = gdpDates.length - 1; i >= 0; i--) {
-      if (gdpDates[i] <= mcObs.date) {
-        nearestGdp = gdpMap.get(gdpDates[i]) || null;
-        break;
-      }
-    }
-
-    if (nearestGdp && nearestGdp > 0) {
-      const ratio = (mcObs.value / nearestGdp) * 100;
-      results.push({
-        date: mcObs.date,
-        marketCap: mcObs.value,
-        gdp: nearestGdp,
-        ratio,
-      });
-    }
-  }
-
-  return results;
+  // Use the pre-calculated Buffett Indicator from FRED
+  const data = await fetchFredSeries(FRED_SERIES.BUFFETT_INDICATOR);
+  
+  return data.map((d) => ({
+    date: d.date,
+    ratio: d.value,
+  }));
 }
 
 export async function fetchMortgageRate(): Promise<Array<{ date: string; value: number }>> {
