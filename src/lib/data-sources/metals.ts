@@ -12,16 +12,6 @@ interface MetalsLivePrice {
   timestamp: number;
 }
 
-interface MetalsApiResponse {
-  success: boolean;
-  base: string;
-  timestamp: number;
-  rates: {
-    XAU: number; // Gold
-    XAG: number; // Silver
-  };
-}
-
 // Using metals.live - free API, no key required
 const METALS_LIVE_API = "https://api.metals.live/v1";
 
