@@ -13,8 +13,8 @@ import {
   fetchMarginDebt,
   fetchCreditSpread,
   fetchYieldCurveSeries,
-  fetchGoldUsd,
   fetchBitcoinHistory,
+  fetchPaxGoldHistory,
   fetchFearGreedIndex,
   fetchCapeHistory,
 } from "@/lib/data-sources";
@@ -165,19 +165,17 @@ export async function GET(request: Request) {
       ]);
       results.metals = { success, count: 2 };
     } else {
-      // Fallback: FRED gold history
-      const goldHist = await fetchGoldUsd();
+      const goldHist = await fetchPaxGoldHistory(365);
       await ingestSeries("gold", "gold", goldHist, results);
       results.metals = {
         success: goldHist.length > 0,
         count: goldHist.length,
-        error: goldHist.length ? undefined : "No metals data",
+        error: goldHist.length ? undefined : "No metals/PAXG data",
       };
     }
 
-    const goldHist = await fetchGoldUsd();
-    if (goldHist.length > 0 && !results.gold) {
-      // Keep a denser gold series for BTC/gold even when spot metals worked
+    const goldHist = await fetchPaxGoldHistory(365);
+    if (goldHist.length > 0) {
       await ingestSeries("goldHist", "gold", goldHist.slice(-500), results);
     }
 
@@ -186,8 +184,6 @@ export async function GET(request: Request) {
     await ingestSeries("bitcoin", "bitcoin", btcHistory, results);
 
     if (btcHistory.length > 0 && goldHist.length > 0) {
-      const goldMap = new Map(goldHist.map((g) => [g.date, g.value]));
-      // Forward-fill gold to nearest prior date for daily BTC
       const sortedGold = [...goldHist].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
@@ -200,7 +196,7 @@ export async function GET(request: Request) {
         ) {
           gi++;
         }
-        const g = goldMap.get(btc.date) ?? sortedGold[gi]?.value;
+        const g = sortedGold[gi]?.value;
         if (g && g > 0) {
           ratios.push({ date: btc.date, value: btc.value / g });
         }

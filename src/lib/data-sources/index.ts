@@ -4,6 +4,7 @@
  */
 
 export * from "./fred";
+export * from "./fred-csv";
 export * from "./metals";
 export * from "./crypto";
 export * from "./fear-greed";
