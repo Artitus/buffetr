@@ -23,7 +23,7 @@ interface SeriesPoint {
 }
 
 type SeriesMap = Partial<Record<MetricType, SeriesPoint[]>>;
-type DataSource = "supabase" | "public_live" | "none";
+type DataSource = "supabase" | "public_live" | "historical_seed" | "none";
 
 async function fetchSeries(
   type: MetricType,
@@ -77,15 +77,25 @@ export default function WarRoomDashboard() {
       const next: SeriesMap = {};
       let any = false;
       let sawPublic = false;
+      let sawSeed = false;
       let sawSupabase = false;
       for (const [t, result] of results) {
         next[t] = result.points;
         if (result.points.length) any = true;
         if (result.source === "public_live") sawPublic = true;
+        if (result.source === "historical_seed") sawSeed = true;
         if (result.source === "supabase") sawSupabase = true;
       }
       setSeries(next);
-      setDataSource(sawSupabase ? "supabase" : sawPublic ? "public_live" : "none");
+      setDataSource(
+        sawSupabase
+          ? "supabase"
+          : sawPublic
+            ? "public_live"
+            : sawSeed
+              ? "historical_seed"
+              : "none"
+      );
       setConfigured(true);
       if (!any) {
         setError(null);
@@ -228,6 +238,14 @@ export default function WarRoomDashboard() {
                     Public live feed
                   </span>
                 )}
+                {dataSource === "historical_seed" && (
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-wider text-sky-400/90"
+                    title="Committed historical snapshot of real series"
+                  >
+                    Historical seed
+                  </span>
+                )}
                 {dataSource === "supabase" && (
                   <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400/90">
                     Persisted
@@ -257,11 +275,17 @@ export default function WarRoomDashboard() {
 
           <StatusStrip items={statusItems} />
 
-          {dataSource === "public_live" && (
-            <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 font-mono text-[11px] text-amber-200/90 sm:px-6">
-              Showing real public series (FRED CSV / CoinGecko / Fear&amp;Greed /
-              CAPE) — not mocked. Add Supabase + FRED key + cron on Vercel to
-              persist the board.
+          {(dataSource === "public_live" || dataSource === "historical_seed") && (
+            <div
+              className={
+                dataSource === "public_live"
+                  ? "border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 font-mono text-[11px] text-amber-200/90 sm:px-6"
+                  : "border-b border-sky-500/25 bg-sky-500/10 px-4 py-2 font-mono text-[11px] text-sky-100/90 sm:px-6"
+              }
+            >
+              {dataSource === "public_live"
+                ? "Showing real public series (FRED CSV / CoinGecko / Fear&Greed / CAPE) — not mocked. Add Supabase + FRED key + cron on Vercel to persist."
+                : "Showing historical seed of real series (snapshot) — not mocked. Live public/cron refresh when upstream is reachable; persist via Supabase env."}
             </div>
           )}
 

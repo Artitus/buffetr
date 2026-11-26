@@ -6,12 +6,19 @@
 
 const FRED_CSV_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv";
 
+function defaultStartDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 12);
+  return d.toISOString().slice(0, 10);
+}
+
 export async function fetchFredCsvSeries(
   seriesId: string,
   options?: { startDate?: string; endDate?: string; limit?: number }
 ): Promise<Array<{ date: string; value: number }>> {
   const params = new URLSearchParams({ id: seriesId });
-  if (options?.startDate) params.set("cosd", options.startDate);
+  // Bound history so edge functions stay under timeout
+  params.set("cosd", options?.startDate || defaultStartDate());
   if (options?.endDate) params.set("coed", options.endDate);
 
   try {
@@ -21,6 +28,7 @@ export async function fetchFredCsvSeries(
         Accept: "text/csv",
       },
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
