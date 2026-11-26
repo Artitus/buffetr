@@ -2,7 +2,10 @@
  * FRED API Client
  * Federal Reserve Economic Data — free access to economic data
  * API Key: https://fred.stlouisfed.org/docs/api/api_key.html
+ * Falls back to keyless fredgraph.csv when FRED_API_KEY is unset.
  */
+
+import { fetchFredCsvSeries } from "./fred-csv";
 
 const FRED_API_BASE = "https://api.stlouisfed.org/fred";
 
@@ -35,8 +38,6 @@ export const FRED_SERIES = {
   MARGIN_DEBT: "BOGZ1FL663067003Q",
   /** Moody's Baa corporate minus 10Y Treasury — credit stress proxy */
   CREDIT_SPREAD: "BAA10Y",
-  /** London AM gold fix USD/oz — historical gold for BTC/gold */
-  GOLD_USD: "GOLDAMGBD228NLBM",
 } as const;
 
 export async function fetchFredSeries(
@@ -46,44 +47,41 @@ export async function fetchFredSeries(
   limit: number = 10000
 ): Promise<Array<{ date: string; value: number }>> {
   const apiKey = process.env.FRED_API_KEY;
-  if (!apiKey) {
-    console.error("FRED_API_KEY not configured");
-    return [];
-  }
 
-  const params = new URLSearchParams({
-    series_id: seriesId,
-    api_key: apiKey,
-    file_type: "json",
-    sort_order: "asc",
-    limit: limit.toString(),
-  });
+  if (apiKey) {
+    const params = new URLSearchParams({
+      series_id: seriesId,
+      api_key: apiKey,
+      file_type: "json",
+      sort_order: "asc",
+      limit: limit.toString(),
+    });
 
-  if (startDate) params.append("observation_start", startDate);
-  if (endDate) params.append("observation_end", endDate);
+    if (startDate) params.append("observation_start", startDate);
+    if (endDate) params.append("observation_end", endDate);
 
-  try {
-    const response = await fetch(
-      `${FRED_API_BASE}/series/observations?${params}`,
-      { next: { revalidate: 3600 } }
-    );
+    try {
+      const response = await fetch(
+        `${FRED_API_BASE}/series/observations?${params}`,
+        { next: { revalidate: 3600 } }
+      );
 
-    if (!response.ok) {
-      throw new Error(`FRED API error: ${response.status}`);
+      if (response.ok) {
+        const data: FredSeriesResponse = await response.json();
+        return data.observations
+          .filter((obs) => obs.value !== ".")
+          .map((obs) => ({
+            date: obs.date,
+            value: parseFloat(obs.value),
+          }));
+      }
+      console.warn(`FRED API ${response.status} for ${seriesId}; trying CSV`);
+    } catch (error) {
+      console.error(`Error fetching FRED API ${seriesId}:`, error);
     }
-
-    const data: FredSeriesResponse = await response.json();
-
-    return data.observations
-      .filter((obs) => obs.value !== ".")
-      .map((obs) => ({
-        date: obs.date,
-        value: parseFloat(obs.value),
-      }));
-  } catch (error) {
-    console.error(`Error fetching FRED series ${seriesId}:`, error);
-    return [];
   }
+
+  return fetchFredCsvSeries(seriesId, { startDate, endDate, limit });
 }
 
 export async function fetchBuffettIndicatorData(): Promise<
@@ -154,12 +152,6 @@ export async function fetchYieldCurveSeries(): Promise<
   Array<{ date: string; value: number }>
 > {
   return fetchFredSeries(FRED_SERIES.YIELD_CURVE_10Y2Y);
-}
-
-export async function fetchGoldUsd(): Promise<
-  Array<{ date: string; value: number }>
-> {
-  return fetchFredSeries(FRED_SERIES.GOLD_USD);
 }
 
 export async function fetchYieldCurve(): Promise<

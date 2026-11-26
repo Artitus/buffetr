@@ -23,17 +23,19 @@ interface SeriesPoint {
 }
 
 type SeriesMap = Partial<Record<MetricType, SeriesPoint[]>>;
+type DataSource = "supabase" | "public_live" | "none";
 
 async function fetchSeries(
   type: MetricType,
   limit = 500
-): Promise<SeriesPoint[]> {
+): Promise<{ points: SeriesPoint[]; source: DataSource }> {
   try {
     const res = await fetch(`/api/metrics/${type}?limit=${limit}`);
-    if (!res.ok) return [];
+    if (!res.ok) return { points: [], source: "none" };
     const json = await res.json();
-    if (!json?.data?.length) return [];
-    return json.data
+    const source = (json?.source as DataSource) || "none";
+    if (!json?.data?.length) return { points: [], source };
+    const points = json.data
       .map((d: { recorded_at: string; value: number }) => ({
         date: d.recorded_at,
         value: d.value,
@@ -42,8 +44,9 @@ async function fetchSeries(
         (a: SeriesPoint, b: SeriesPoint) =>
           new Date(a.date).getTime() - new Date(b.date).getTime()
       );
+    return { points, source };
   } catch {
-    return [];
+    return { points: [], source: "none" };
   }
 }
 
@@ -58,6 +61,7 @@ export default function WarRoomDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [range, setRange] = useState<TimeRange>("ALL");
   const [configured, setConfigured] = useState(true);
+  const [dataSource, setDataSource] = useState<DataSource>("none");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,20 +76,25 @@ export default function WarRoomDashboard() {
       );
       const next: SeriesMap = {};
       let any = false;
-      for (const [t, data] of results) {
-        next[t] = data;
-        if (data.length) any = true;
+      let sawPublic = false;
+      let sawSupabase = false;
+      for (const [t, result] of results) {
+        next[t] = result.points;
+        if (result.points.length) any = true;
+        if (result.source === "public_live") sawPublic = true;
+        if (result.source === "supabase") sawSupabase = true;
       }
       setSeries(next);
+      setDataSource(sawSupabase ? "supabase" : sawPublic ? "public_live" : "none");
       setConfigured(true);
       if (!any) {
-        // Intentional empty — not a hard failure
         setError(null);
       }
     } catch (err) {
       console.error(err);
       setError("Unable to reach the metrics API.");
       setConfigured(false);
+      setDataSource("none");
     } finally {
       setLoading(false);
     }
@@ -211,6 +220,19 @@ export default function WarRoomDashboard() {
                 >
                   Alerts: stubbed
                 </a>
+                {dataSource === "public_live" && (
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-wider text-amber-400/90"
+                    title="Serving live public APIs until Supabase + cron are configured"
+                  >
+                    Public live feed
+                  </span>
+                )}
+                {dataSource === "supabase" && (
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-400/90">
+                    Persisted
+                  </span>
+                )}
               </div>
               <p className="mt-1 max-w-xl font-mono text-xs text-[var(--wr-muted)] sm:text-sm">
                 Public bubble / FUD terminal — Buffett Indicator hero with
@@ -234,6 +256,14 @@ export default function WarRoomDashboard() {
           </header>
 
           <StatusStrip items={statusItems} />
+
+          {dataSource === "public_live" && (
+            <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 font-mono text-[11px] text-amber-200/90 sm:px-6">
+              Showing real public series (FRED CSV / CoinGecko / Fear&amp;Greed /
+              CAPE) — not mocked. Add Supabase + FRED key + cron on Vercel to
+              persist the board.
+            </div>
+          )}
 
           {/* Hero Buffett */}
           <section className="relative flex min-h-[42vh] flex-col border-b border-[var(--wr-border)] sm:min-h-[48vh]">

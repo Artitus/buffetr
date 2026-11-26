@@ -6,8 +6,10 @@ import {
   METRIC_TYPES,
   type MetricType,
 } from "@/lib/supabase";
+import { fetchPublicMetricSeries } from "@/lib/public-metrics";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request,
@@ -30,26 +32,68 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const latest = searchParams.get("latest") === "true";
   const limit = parseInt(searchParams.get("limit") || "365", 10);
+  const cappedLimit = Math.min(limit, 1000);
 
   try {
     if (latest) {
       const metric = await getLatestMetric(metricType);
-      if (!metric) {
-        return NextResponse.json(
-          { error: "No data available", empty: true },
-          { status: 404 }
-        );
+      if (metric) {
+        return NextResponse.json({ data: metric, source: "supabase" });
       }
-      return NextResponse.json({ data: metric });
+
+      const pub = await fetchPublicMetricSeries(metricType, cappedLimit);
+      if (pub?.data.length) {
+        const last = pub.data[pub.data.length - 1];
+        return NextResponse.json({
+          data: last,
+          source: pub.source,
+          label: pub.label,
+        });
+      }
+
+      return NextResponse.json(
+        { error: "No data available", empty: true },
+        { status: 404 }
+      );
     }
 
-    const metrics = await getMetrics(metricType, Math.min(limit, 1000));
+    let metrics: Awaited<ReturnType<typeof getMetrics>> = [];
+    try {
+      metrics = await getMetrics(metricType, cappedLimit);
+    } catch {
+      metrics = [];
+    }
+
+    if (metrics.length > 0) {
+      return NextResponse.json({
+        data: metrics,
+        count: metrics.length,
+        metricType,
+        empty: false,
+        source: "supabase",
+      });
+    }
+
+    const pub = await fetchPublicMetricSeries(metricType, cappedLimit);
+    if (pub?.data.length) {
+      // API historically returns newest-first from Supabase; keep that shape
+      const newestFirst = [...pub.data].reverse();
+      return NextResponse.json({
+        data: newestFirst,
+        count: newestFirst.length,
+        metricType,
+        empty: false,
+        source: pub.source,
+        label: pub.label,
+      });
+    }
 
     return NextResponse.json({
-      data: metrics,
-      count: metrics.length,
+      data: [],
+      count: 0,
       metricType,
-      empty: metrics.length === 0,
+      empty: true,
+      source: "none",
     });
   } catch (error) {
     console.error(`Error fetching ${metricType}:`, error);

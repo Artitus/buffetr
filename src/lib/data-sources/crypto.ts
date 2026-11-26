@@ -71,6 +71,32 @@ export async function fetchBitcoinHistory(
   }
 }
 
+/** PAX Gold (PAXG) ≈ USD/oz gold via CoinGecko when metals APIs are down. */
+export async function fetchPaxGoldHistory(
+  days: number = 365
+): Promise<Array<{ date: string; value: number }>> {
+  try {
+    const response = await fetch(
+      `${COINGECKO_API_BASE}/coins/pax-gold/market_chart?vs_currency=usd&days=${days}`,
+      { next: { revalidate: 3600 } }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinGecko PAXG error: ${response.status}`);
+    }
+
+    const data: CoinGeckoMarketData = await response.json();
+
+    return data.prices.map(([timestamp, price]) => ({
+      date: new Date(timestamp).toISOString().split("T")[0],
+      value: price,
+    }));
+  } catch (error) {
+    console.error("Error fetching PAXG history:", error);
+    return [];
+  }
+}
+
 // Mock data for when API is rate-limited
 export function getMockBitcoinData(): {
   price: number;
