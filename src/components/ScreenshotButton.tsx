@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Check, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";

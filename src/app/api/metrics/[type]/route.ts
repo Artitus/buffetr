@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { getMetrics, getLatestMetric, type MetricType } from "@/lib/supabase";
+import {
+  getMetrics,
+  getLatestMetric,
+  isMetricType,
+  METRIC_TYPES,
+  type MetricType,
+} from "@/lib/supabase";
 
 export const runtime = "edge";
-
-const VALID_METRIC_TYPES: MetricType[] = [
-  "buffett_indicator",
-  "gold",
-  "silver",
-  "sp500",
-  "mortgage_rate",
-  "home_price_index",
-  "market_cap",
-  "gdp",
-];
 
 export async function GET(
   request: Request,
@@ -20,12 +15,11 @@ export async function GET(
 ) {
   const { type } = await params;
 
-  // Validate metric type
-  if (!VALID_METRIC_TYPES.includes(type as MetricType)) {
+  if (!isMetricType(type)) {
     return NextResponse.json(
       {
         error: "Invalid metric type",
-        validTypes: VALID_METRIC_TYPES,
+        validTypes: METRIC_TYPES,
       },
       { status: 400 }
     );
@@ -33,7 +27,6 @@ export async function GET(
 
   const metricType = type as MetricType;
 
-  // Parse query parameters
   const { searchParams } = new URL(request.url);
   const latest = searchParams.get("latest") === "true";
   const limit = parseInt(searchParams.get("limit") || "365", 10);
@@ -43,7 +36,7 @@ export async function GET(
       const metric = await getLatestMetric(metricType);
       if (!metric) {
         return NextResponse.json(
-          { error: "No data available" },
+          { error: "No data available", empty: true },
           { status: 404 }
         );
       }
@@ -56,6 +49,7 @@ export async function GET(
       data: metrics,
       count: metrics.length,
       metricType,
+      empty: metrics.length === 0,
     });
   } catch (error) {
     console.error(`Error fetching ${metricType}:`, error);
@@ -65,4 +59,3 @@ export async function GET(
     );
   }
 }
-

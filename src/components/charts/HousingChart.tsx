@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Title, Text, Metric, Flex, LineChart, BarList, Color } from "@tremor/react";
+import { Card, Title, Text, Metric, Flex, LineChart, Color } from "@tremor/react";
 import { Home, Percent } from "lucide-react";
 import { useMemo } from "react";
 

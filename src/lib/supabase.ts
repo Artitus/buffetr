@@ -2,37 +2,71 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// Lazy initialization to avoid build-time errors
-let _supabase: SupabaseClient | null = null;
+let _anon: SupabaseClient | null = null;
+let _service: SupabaseClient | null = null;
 
-function getSupabase(): SupabaseClient {
-  if (!_supabase) {
+function getAnonClient(): SupabaseClient {
+  if (!_anon) {
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
         "Supabase credentials not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
     }
-    _supabase = createClient(supabaseUrl, supabaseAnonKey);
+    _anon = createClient(supabaseUrl, supabaseAnonKey);
   }
-  return _supabase;
+  return _anon;
+}
+
+/** Service-role client for cron / server writes. Bypasses RLS. */
+function getServiceClient(): SupabaseClient {
+  if (!_service) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      throw new Error(
+        "Supabase service role not configured. Set SUPABASE_SERVICE_ROLE_KEY for writes."
+      );
+    }
+    _service = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return _service;
 }
 
 export const supabase = {
   get client() {
-    return getSupabase();
+    return getAnonClient();
   },
 };
 
-export type MetricType =
-  | "buffett_indicator"
-  | "gold"
-  | "silver"
-  | "sp500"
-  | "mortgage_rate"
-  | "home_price_index"
-  | "market_cap"
-  | "gdp";
+export const METRIC_TYPES = [
+  "buffett_indicator",
+  "gold",
+  "silver",
+  "sp500",
+  "mortgage_rate",
+  "home_price_index",
+  "market_cap",
+  "gdp",
+  "m2_real",
+  "cpi",
+  "federal_debt",
+  "federal_interest",
+  "bitcoin",
+  "btc_gold_ratio",
+  "margin_debt",
+  "cape",
+  "fear_greed",
+  "yield_curve",
+  "credit_spread",
+] as const;
+
+export type MetricType = (typeof METRIC_TYPES)[number];
+
+export function isMetricType(value: string): value is MetricType {
+  return (METRIC_TYPES as readonly string[]).includes(value);
+}
 
 export interface Metric {
   id: number;
@@ -48,7 +82,7 @@ export async function getMetrics(
   limit: number = 365
 ): Promise<Metric[]> {
   try {
-    const { data, error } = await getSupabase()
+    const { data, error } = await getAnonClient()
       .from("metrics")
       .select("*")
       .eq("metric_type", metricType)
@@ -71,7 +105,7 @@ export async function getLatestMetric(
   metricType: MetricType
 ): Promise<Metric | null> {
   try {
-    const { data, error } = await getSupabase()
+    const { data, error } = await getAnonClient()
       .from("metrics")
       .select("*")
       .eq("metric_type", metricType)
@@ -98,7 +132,7 @@ export async function upsertMetric(
   metadata?: Record<string, unknown>
 ): Promise<boolean> {
   try {
-    const { error } = await getSupabase().from("metrics").upsert(
+    const { error } = await getServiceClient().from("metrics").upsert(
       {
         metric_type: metricType,
         value,
@@ -117,7 +151,7 @@ export async function upsertMetric(
 
     return true;
   } catch (error) {
-    console.error("Supabase not configured:", error);
+    console.error("Supabase write failed:", error);
     return false;
   }
 }
@@ -130,6 +164,8 @@ export async function bulkUpsertMetrics(
     metadata?: Record<string, unknown>;
   }>
 ): Promise<boolean> {
+  if (metrics.length === 0) return true;
+
   try {
     const formattedMetrics = metrics.map((m) => ({
       metric_type: m.metric_type,
@@ -138,9 +174,11 @@ export async function bulkUpsertMetrics(
       metadata: m.metadata || null,
     }));
 
-    const { error } = await getSupabase().from("metrics").upsert(formattedMetrics, {
-      onConflict: "metric_type,recorded_at",
-    });
+    const { error } = await getServiceClient()
+      .from("metrics")
+      .upsert(formattedMetrics, {
+        onConflict: "metric_type,recorded_at",
+      });
 
     if (error) {
       console.error("Error bulk upserting metrics:", error);
@@ -149,7 +187,7 @@ export async function bulkUpsertMetrics(
 
     return true;
   } catch (error) {
-    console.error("Supabase not configured:", error);
+    console.error("Supabase write failed:", error);
     return false;
   }
 }

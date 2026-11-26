@@ -1,5 +1,7 @@
--- Buffetr Database Schema
--- Run this in your Supabase SQL editor to set up the database
+-- Buffetr Database Schema (source of truth)
+-- Run this in your Supabase SQL editor to set up the database.
+-- Cron writes must use the service role key (bypasses RLS).
+-- Anon key is read-only.
 
 -- Core metrics table for all time-series data
 CREATE TABLE IF NOT EXISTS metrics (
@@ -15,39 +17,39 @@ CREATE TABLE IF NOT EXISTS metrics (
 -- Index for fast time-series queries
 CREATE INDEX IF NOT EXISTS idx_metrics_type_date ON metrics(metric_type, recorded_at DESC);
 
--- Index for getting latest values quickly
-CREATE INDEX IF NOT EXISTS idx_metrics_latest ON metrics(metric_type, recorded_at DESC);
-
--- Enable Row Level Security (optional, for public read access)
+-- Enable Row Level Security
 ALTER TABLE metrics ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to metrics
-CREATE POLICY "Allow public read access" ON metrics
+-- Drop legacy open write policies if re-running
+DROP POLICY IF EXISTS "Allow public read access" ON metrics;
+DROP POLICY IF EXISTS "Allow authenticated insert" ON metrics;
+DROP POLICY IF EXISTS "Allow authenticated update" ON metrics;
+DROP POLICY IF EXISTS "Allow public read" ON metrics;
+DROP POLICY IF EXISTS "Allow insert" ON metrics;
+DROP POLICY IF EXISTS "Allow update" ON metrics;
+
+-- Anon / public: read-only
+CREATE POLICY "metrics_public_read" ON metrics
   FOR SELECT
   USING (true);
 
--- Allow authenticated users to insert/update (for cron jobs)
-CREATE POLICY "Allow authenticated insert" ON metrics
-  FOR INSERT
-  WITH CHECK (true);
-
-CREATE POLICY "Allow authenticated update" ON metrics
-  FOR UPDATE
-  USING (true);
+-- Writes: service role only (bypasses RLS). No anon INSERT/UPDATE/DELETE.
 
 -- Metric types reference:
--- buffett_indicator: Total Market Cap / GDP ratio (as percentage)
--- gold: Gold price in USD per troy ounce
--- silver: Silver price in USD per troy ounce  
--- sp500: S&P 500 index value
--- mortgage_rate: 30-year fixed mortgage rate (percentage)
--- home_price_index: Case-Shiller National Home Price Index
--- market_cap: Total US stock market capitalization (Wilshire 5000)
--- gdp: US Gross Domestic Product
-
--- Sample data insertion (for testing)
--- INSERT INTO metrics (metric_type, value, recorded_at) VALUES
---   ('buffett_indicator', 195.5, '2024-01-01'),
---   ('gold', 2050.00, '2024-01-01'),
---   ('silver', 23.50, '2024-01-01');
-
+-- buffett_indicator  — Total Market Cap / GDP (%)
+-- gold / silver      — USD per troy ounce
+-- sp500              — S&P 500 index
+-- mortgage_rate      — 30-year fixed mortgage (%)
+-- home_price_index   — Case-Shiller National HPI
+-- market_cap / gdp   — components (when available)
+-- m2_real            — Real M2 money stock
+-- cpi                — CPI index level
+-- federal_debt       — Total public debt ($M)
+-- federal_interest   — Federal interest outlays
+-- bitcoin            — BTC/USD
+-- btc_gold_ratio     — BTC price / gold oz
+-- margin_debt        — Broker-dealer margin accounts
+-- cape               — Shiller CAPE proxy / PE
+-- fear_greed         — Crypto Fear & Greed (0-100)
+-- yield_curve        — 10Y–2Y Treasury spread (pp)
+-- credit_spread      — Baa–10Y credit spread (pp)

@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Title, Text, Metric, Flex, Grid, AreaChart, DonutChart } from "@tremor/react";
+import { Card, Title, Text, Metric, Flex, Grid, AreaChart } from "@tremor/react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useMemo } from "react";
 

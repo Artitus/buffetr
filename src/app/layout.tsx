@@ -1,39 +1,49 @@
 import type { Metadata } from "next";
-import { Nunito, DM_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: "--font-ibm-plex-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-ibm-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Buffetr | Your Friendly Market Dashboard 📈",
+  title: "Buffetr | Bloomberg War Room",
   description:
-    "Track the Warren Buffett Indicator, precious metals prices, housing market data, and key financial metrics - made simple and beautiful.",
+    "Public free bubble/FUD terminal: Buffett Indicator hero with real M2/CPI, federal debt, housing, BTC/gold, margin/CAPE, Fear & Greed, and yield/credit satellites.",
   keywords: [
-    "Warren Buffett Indicator",
+    "Buffetr",
+    "Buffett Indicator",
     "market cap to GDP",
-    "stock market valuation",
-    "gold price",
-    "silver price",
-    "housing market",
-    "mortgage rates",
+    "war room",
+    "Fear and Greed",
+    "yield curve",
+    "federal debt",
+    "bitcoin",
+    "Case-Shiller",
     "financial dashboard",
   ],
   authors: [{ name: "Buffetr" }],
   openGraph: {
-    title: "Buffetr | Your Friendly Market Dashboard 📈",
+    title: "Buffetr | Bloomberg War Room",
     description:
-      "Track market valuations, precious metals, and housing data in one beautiful dashboard.",
+      "Dense multi-panel market war room — Buffett Indicator hero plus correlated macro satellites. Alerts stubbed.",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Buffetr | Bloomberg War Room",
+    description:
+      "Public free Buffett Indicator war room with correlated bubble/FUD metrics.",
   },
 };
 
@@ -45,7 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${nunito.variable} ${dmSans.variable} font-sans antialiased`}
+        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} font-sans antialiased`}
       >
         {children}
       </body>

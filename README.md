@@ -1,178 +1,71 @@
-# Buffetr 📈
+# Buffetr
 
-A beautiful financial dashboard for tracking the Warren Buffett Indicator, precious metals prices, housing market data, and key market metrics.
+Public free **Bloomberg war-room** dashboard: Buffett Indicator hero plus correlated bubble/FUD satellites (M2/CPI, federal debt & interest, Case-Shiller/mortgage, BTC & BTC/gold, margin debt/CAPE, Fear & Greed, yield curve & credit spreads).
 
 ## Features
 
-- **Warren Buffett Indicator** - Track the total market cap to GDP ratio with historical context and valuation levels
-- **S&P 500 Index** - Monitor US stock market performance with 52-week range visualization
-- **Precious Metals** - Gold and silver prices with gold/silver ratio analysis
-- **Housing Market** - 30-year mortgage rates and Case-Shiller Home Price Index
-- **Dark Theme** - Beautiful, modern interface optimized for financial data visualization
-- **Demo Mode** - Works with mock data when database isn't configured
-- **Automated Updates** - Vercel cron job fetches fresh data every 4 hours
+- **Buffett Indicator hero** — full-bleed Lightweight Charts terminal view
+- **Satellite grid** — dense mono panels for macro / leverage / crypto / rates
+- **Real ingest** — Vercel cron every 4h via FRED, CoinGecko, Alternative.me, metals.live, CAPE CSV
+- **Alerts stubbed** — flux detection + tweet/RSS drafts; no live X posting
+- **Hardened Supabase** — anon read-only RLS; service-role writes from cron
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | Framework | Next.js 16 (App Router) |
-| Charts | Tremor 3.x |
-| UI Components | shadcn/ui + Tailwind CSS v4 |
+| Hero charts | TradingView Lightweight Charts |
+| Satellite charts | Tremor 3.x |
+| UI | Tailwind CSS v4 + shadcn/ui |
 | Database | Supabase (Postgres) |
-| Data Sources | FRED API, metals.live |
-| Deployment | Vercel |
-
-## Project Structure
-
-```
-buffetr/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── cron/update-metrics/    # Vercel cron endpoint
-│   │   │   └── metrics/[type]/         # REST API for metrics
-│   │   ├── globals.css                 # Custom dark theme
-│   │   ├── layout.tsx                  # Root layout
-│   │   └── page.tsx                    # Main dashboard
-│   ├── components/
-│   │   ├── charts/                     # Tremor chart components
-│   │   │   ├── BuffettIndicatorChart.tsx
-│   │   │   ├── PreciousMetalsChart.tsx
-│   │   │   ├── HousingChart.tsx
-│   │   │   └── SP500Chart.tsx
-│   │   └── ui/                         # shadcn/ui components
-│   └── lib/
-│       ├── data-sources/               # API clients
-│       │   ├── fred.ts                 # FRED API client
-│       │   └── metals.ts               # Precious metals API
-│       └── supabase.ts                 # Database client
-├── supabase/schema.sql                 # Database schema
-└── vercel.json                         # Cron configuration
-```
+| Data | FRED, CoinGecko, Alternative.me, metals.live |
+| Deploy | Vercel (cron) |
 
 ## Getting Started
 
-### Prerequisites
+1. `npm install`
+2. `cp .env.example .env.local` and fill values
+3. Run `supabase/schema.sql` in the Supabase SQL editor
+4. `npm run dev` → [http://localhost:3000](http://localhost:3000)
+5. Seed data: `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/update-metrics`
 
-- Node.js 18+
-- npm or yarn
-- Supabase account (free tier works)
-- FRED API key (free at [fred.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html))
+Empty boards are intentional until cron + credentials succeed — no fake demo headlines.
 
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Artitus/buffetr.git
-   cd buffetr
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   Edit `.env.local` with your credentials:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-   FRED_API_KEY=your-fred-api-key
-   CRON_SECRET=your-random-secret
-   ```
-
-4. Set up the database:
-   - Go to your Supabase project
-   - Open the SQL Editor
-   - Run the contents of `supabase/schema.sql`
-
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-6. Open [http://localhost:3000](http://localhost:3000)
-
-> **Note:** The app works in demo mode with mock data if Supabase isn't configured yet!
-
-### Deployment to Vercel
-
-1. Push your code to GitHub
-2. Import the project in [Vercel](https://vercel.com/new)
-3. Add environment variables in Vercel dashboard:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `FRED_API_KEY`
-   - `CRON_SECRET`
-4. Deploy!
-
-The cron job in `vercel.json` will automatically update data every 4 hours.
-
-## API Routes
-
-### GET /api/metrics/[type]
-Fetch historical data for a specific metric.
-
-**Parameters:**
-- `type`: One of `buffett_indicator`, `gold`, `silver`, `sp500`, `mortgage_rate`, `home_price_index`, `market_cap`, `gdp`
-- `latest` (optional): Set to `true` to get only the latest value
-- `limit` (optional): Number of records to return (default: 365, max: 1000)
-
-**Example:**
-```bash
-curl https://your-domain.com/api/metrics/buffett_indicator?limit=30
-```
-
-### GET /api/cron/update-metrics
-Triggered by Vercel Cron to update all metrics. Requires `CRON_SECRET` authorization header.
-
-## Data Sources
-
-| Metric | Source | FRED Series | Update Frequency |
-|--------|--------|-------------|------------------|
-| Buffett Indicator | FRED | WILL5000PRFC / GDP | Daily |
-| Gold Price | metals.live | - | Every 4 hours |
-| Silver Price | metals.live | - | Every 4 hours |
-| S&P 500 | FRED | SP500 | Daily |
-| 30Y Mortgage Rate | FRED | MORTGAGE30US | Weekly |
-| Home Price Index | FRED | CSUSHPINSA | Monthly |
-
-## Understanding the Buffett Indicator
-
-The Warren Buffett Indicator (Total Market Cap / GDP) is considered by many investors to be "the best single measure of where valuations stand at any given moment."
-
-| Ratio | Interpretation | Color |
-|-------|----------------|-------|
-| < 50% | Severely Undervalued | 🟢 Green |
-| 50-75% | Undervalued | 🟢 Green |
-| 75-100% | Fair Value | 🟡 Yellow |
-| 100-115% | Modestly Overvalued | 🟠 Orange |
-| 115-140% | Significantly Overvalued | 🔴 Red |
-| > 140% | Severely Overvalued | 🔴 Rose |
-
-## Environment Variables
+## Environment
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key |
-| `FRED_API_KEY` | Yes | Federal Reserve Economic Data API key |
-| `CRON_SECRET` | Yes | Secret for authenticating cron requests |
-| `GOLD_API_KEY` | No | Optional Gold-API.io key (fallback for metals) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Anon key (read-only) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role for cron writes |
+| `FRED_API_KEY` | Yes | FRED API key |
+| `CRON_SECRET` | Yes | Bearer secret for cron + alerts preview |
+| `GOLD_API_KEY` | No | Optional metals fallback |
+| `NEXT_PUBLIC_SITE_URL` | No | Used in alert draft links |
+
+## API
+
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `GET /api/metrics/[type]` | Public | Time series / `?latest=true` |
+| `GET /api/cron/update-metrics` | `Bearer CRON_SECRET` | Full war-room ingest |
+| `GET /api/alerts/preview` | `Bearer CRON_SECRET` | Flux drafts (stub) |
+| `GET /api/alerts/rss` | Public | Valid empty RSS skeleton |
+
+### Metric types
+
+`buffett_indicator`, `gold`, `silver`, `sp500`, `mortgage_rate`, `home_price_index`, `market_cap`, `gdp`, `m2_real`, `cpi`, `federal_debt`, `federal_interest`, `bitcoin`, `btc_gold_ratio`, `margin_debt`, `cape`, `fear_greed`, `yield_curve`, `credit_spread`
+
+## Buffett Indicator bands
+
+| Ratio | Interpretation |
+|-------|----------------|
+| &lt; 75% | Undervalued |
+| 75–100% | Fair value |
+| 100–140% | Overvalued |
+| &gt; 140% | Extreme |
 
 ## License
 
-MIT License - feel free to use this project however you'd like.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
----
-
-Built with ❤️ using Next.js, Tremor, and Supabase
+MIT
