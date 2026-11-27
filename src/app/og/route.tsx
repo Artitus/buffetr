@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const BUDGET_MS = 3500;
+/** A normal Buffett read is about 7s. Past 10s, return the static card. */
+const BUDGET_MS = 10_000;
 
 const STATIC_FALLBACK = {
   word: "COOKED",
@@ -27,7 +28,8 @@ export async function GET(request: Request) {
   const receipt = receiptBySlug(slug);
 
   const card = await loadCard(url.origin, receipt.metric, receipt.name);
-  return renderCard(card ?? STATIC_FALLBACK);
+  if (!card) return renderCard(STATIC_FALLBACK, false);
+  return renderCard(card, true);
 }
 
 async function loadCard(
@@ -79,12 +81,15 @@ async function latestValue(
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function renderCard(card: {
-  word: string;
-  number: string;
-  name: string;
-  color: string;
-}) {
+function renderCard(
+  card: {
+    word: string;
+    number: string;
+    name: string;
+    color: string;
+  },
+  cache: boolean
+) {
   return new ImageResponse(
     (
       <div
@@ -139,7 +144,9 @@ function renderCard(card: {
       width: WIDTH,
       height: HEIGHT,
       headers: {
-        "Cache-Control": "public, max-age=120, s-maxage=300",
+        "Cache-Control": cache
+          ? "public, max-age=120, s-maxage=300"
+          : "no-store",
       },
     }
   );
