@@ -143,12 +143,12 @@ export default function Page() {
   return (
     <main
       aria-busy={loading}
-      className="flex min-h-screen flex-col bg-[var(--wr-bg)] text-[var(--wr-fg)]"
+      className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--wr-bg)] text-[var(--wr-fg)]"
     >
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 sm:px-6">
-        <div className="flex flex-col items-center text-center">
+      <section className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-end justify-between gap-4 px-4 pt-4 sm:px-6 sm:pt-5">
           <h1
-            className="text-7xl font-bold leading-[0.85] tracking-tight sm:text-8xl md:text-9xl"
+            className="text-5xl font-bold leading-none tracking-tight sm:text-7xl lg:text-8xl"
             style={{ color: verdict?.color ?? "#d5dde8" }}
           >
             {loading ? (
@@ -160,68 +160,37 @@ export default function Page() {
               (verdict?.word ?? "—")
             )}
           </h1>
-          <p className="mt-4 font-mono text-4xl font-medium tabular-nums tracking-tight sm:text-5xl">
+          <p className="font-mono text-3xl font-medium tabular-nums tracking-tight sm:text-5xl">
             {loading ? "\u00a0" : activeNumber}
           </p>
         </div>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-2">
-          {RECEIPTS.map((receipt) => {
-            const points = series[receipt.metric];
-            const value = latestValue(points);
-            const number =
-              loading || value == null
-                ? "—"
-                : stickerNumber(receipt.metric, value);
-            const arrow =
-              !loading && value != null
-                ? arrowFor((points ?? []).map((p) => p.value))
-                : null;
-            const selected = urlReady && slug === receipt.slug;
-            return (
-              <button
-                key={receipt.slug}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => promote(receipt.slug)}
-                className={`rounded-full px-3 py-2 font-mono text-sm tabular-nums transition-colors ${
-                  selected
-                    ? "bg-white/10 text-[var(--wr-fg)]"
-                    : "text-[var(--wr-dim)] hover:text-[var(--wr-muted)]"
-                }`}
-              >
-                <span>{receipt.name}</span>{" "}
-                <span>{number}</span>
-                {arrow ? <span aria-hidden> {arrow}</span> : null}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-6">
+        <div className="relative min-h-0 flex-1">
           {!loading && chartData.length >= 2 ? (
             <ErrorBoundary
               fallback={
-                <p className="flex h-[280px] items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
+                <p className="flex h-full items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
                   —
                 </p>
               }
             >
-              <ReceiptChart
-                data={chartData}
-                color={verdict?.color ?? "#8b9cb3"}
-                formatValue={formatValue}
-                label={active.name}
-              />
+              <div className="absolute inset-0">
+                <ReceiptChart
+                  data={chartData}
+                  color={verdict?.color ?? "#8b9cb3"}
+                  formatValue={formatValue}
+                  label={active.name}
+                />
+              </div>
             </ErrorBoundary>
           ) : (
-            <div className="flex h-[280px] items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
+            <div className="flex h-full items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
               {loading ? "" : "—"}
             </div>
           )}
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center justify-between px-4 py-2 sm:px-6">
           <div className="flex gap-4 font-mono text-sm">
             {RANGE_WORDS.map((word) => (
               <button
@@ -247,11 +216,48 @@ export default function Page() {
             Copy
           </button>
         </div>
+      </section>
 
-        <footer className="pt-12 text-center font-mono text-[10px] text-[var(--wr-dim)]">
-          FRED · CoinGecko · Alternative.me · metals.live
-        </footer>
-      </div>
+      <section className="grid shrink-0 grid-cols-4 gap-px border-t border-[var(--wr-border)] bg-[var(--wr-border)] lg:grid-cols-8">
+        {RECEIPTS.map((receipt) => {
+          const points = series[receipt.metric];
+          const value = latestValue(points);
+          const number =
+            loading || value == null
+              ? "—"
+              : stickerNumber(receipt.metric, value);
+          const arrow =
+            !loading && value != null
+              ? arrowFor((points ?? []).map((p) => p.value))
+              : null;
+          const selected = urlReady && slug === receipt.slug;
+          return (
+            <button
+              key={receipt.slug}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => promote(receipt.slug)}
+              className={`flex min-w-0 flex-col items-start gap-0.5 px-3 py-2.5 text-left font-mono tabular-nums transition-colors sm:px-4 ${
+                selected
+                  ? "bg-white/10 text-[var(--wr-fg)]"
+                  : "bg-[var(--wr-bg)] text-[var(--wr-dim)] hover:bg-white/5 hover:text-[var(--wr-muted)]"
+              }`}
+            >
+              <span className="text-[10px] uppercase tracking-[0.14em]">
+                {receipt.name}
+              </span>
+              <span className="text-sm sm:text-base">
+                {number}
+                {arrow ? <span aria-hidden> {arrow}</span> : null}
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      <footer className="shrink-0 border-t border-[var(--wr-border)] px-4 py-1.5 text-center font-mono text-[10px] text-[var(--wr-dim)]">
+        FRED · CoinGecko · Alternative.me · metals.live
+      </footer>
     </main>
   );
 }

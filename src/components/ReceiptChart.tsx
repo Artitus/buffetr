@@ -101,7 +101,7 @@ export function ReceiptChart({
   return (
     <div
       ref={containerRef}
-      className="h-[280px] w-full"
+      className="h-full w-full"
       role="img"
       aria-label={label}
     />
