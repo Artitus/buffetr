@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { headers } from "next/headers";
+import { parseSlug } from "@/lib/verdict";
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -16,36 +18,49 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Buffetr | Bloomberg War Room",
-  description:
-    "Public free bubble/FUD terminal: Buffett Indicator hero with real M2/CPI, federal debt, housing, BTC/gold, margin/CAPE, Fear & Greed, and yield/credit satellites.",
-  keywords: [
-    "Buffetr",
-    "Buffett Indicator",
-    "market cap to GDP",
-    "war room",
-    "Fear and Greed",
-    "yield curve",
-    "federal debt",
-    "bitcoin",
-    "Case-Shiller",
-    "financial dashboard",
-  ],
-  authors: [{ name: "Buffetr" }],
-  openGraph: {
-    title: "Buffetr | Bloomberg War Room",
-    description:
-      "Dense multi-panel market war room — Buffett Indicator hero plus correlated macro satellites. Alerts stubbed.",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Buffetr | Bloomberg War Room",
-    description:
-      "Public free Buffett Indicator war room with correlated bubble/FUD metrics.",
-  },
-};
+const SITE = "https://buffetr.vercel.app";
+const DESCRIPTION = "Buffett. Cheap, Fine, Hot, Cooked.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const slug = parseSlug(h.get("x-buffetr-m"));
+  const image = `/og?m=${slug}`;
+
+  return {
+    metadataBase: new URL(SITE),
+    title: "Buffetr",
+    description: DESCRIPTION,
+    keywords: [
+      "Buffetr",
+      "Buffett",
+      "BTC",
+      "Houses",
+      "Debt",
+      "Gold",
+      "Fear",
+      "Yield",
+      "Rates",
+      "Cheap",
+      "Fine",
+      "Hot",
+      "Cooked",
+    ],
+    authors: [{ name: "Buffetr" }],
+    openGraph: {
+      title: "Buffetr",
+      description: DESCRIPTION,
+      type: "website",
+      url: slug === "buffett" ? SITE : `${SITE}/?m=${slug}`,
+      images: [{ url: image, width: 1200, height: 630, alt: "Buffetr" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Buffetr",
+      description: DESCRIPTION,
+      images: [image],
+    },
+  };
+}
 
 export default function RootLayout({
   children,

@@ -1,26 +1,29 @@
 # Buffetr
 
-Public free **Bloomberg war-room** dashboard: Buffett Indicator hero plus correlated bubble/FUD satellites (M2/CPI, federal debt & interest, Case-Shiller/mortgage, BTC & BTC/gold, margin debt/CAPE, Fear & Greed, yield curve & credit spreads).
+Buffett. Cheap, Fine, Hot, Cooked.
 
-## Features
+Buffett · BTC · Houses · Debt · Gold · Fear · Yield · Rates
 
-- **Buffett Indicator hero** — full-bleed Lightweight Charts terminal view
-- **Satellite grid** — dense mono panels for macro / leverage / crypto / rates
-- **Real ingest** — Vercel cron every 4h via FRED, CoinGecko, Alternative.me, metals.live, CAPE CSV
-- **Alerts stubbed** — flux detection + tweet/RSS drafts; no live X posting
-- **Hardened Supabase** — anon read-only RLS; service-role writes from cron
+| Word | Buffett |
+|------|---------|
+| CHEAP | below 75 |
+| FINE | 75 up to 100 |
+| HOT | 100 up to 140 |
+| COOKED | 140 and over |
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | Framework | Next.js 16 (App Router) |
-| Hero charts | TradingView Lightweight Charts |
-| Satellite charts | Tremor 3.x |
+| Charts | TradingView Lightweight Charts |
+| Panels | Tremor 3.x |
 | UI | Tailwind CSS v4 + shadcn/ui |
 | Database | Supabase (Postgres) |
 | Data | FRED, CoinGecko, Alternative.me, metals.live |
-| Deploy | Vercel (cron) |
+| Deploy | Vercel |
 
 ## Getting Started
 
@@ -57,14 +60,14 @@ Empty boards are intentional until cron + credentials succeed — no fake demo h
 
 `buffett_indicator`, `gold`, `silver`, `sp500`, `mortgage_rate`, `home_price_index`, `market_cap`, `gdp`, `m2_real`, `cpi`, `federal_debt`, `federal_interest`, `bitcoin`, `btc_gold_ratio`, `margin_debt`, `cape`, `fear_greed`, `yield_curve`, `credit_spread`
 
-## Buffett Indicator bands
+## Buffett bands
 
-| Ratio | Interpretation |
-|-------|----------------|
-| &lt; 75% | Undervalued |
-| 75–100% | Fair value |
-| 100–140% | Overvalued |
-| &gt; 140% | Extreme |
+| Ratio | Word |
+|-------|------|
+| below 75 | CHEAP |
+| 75 up to 100 | FINE |
+| 100 up to 140 | HOT |
+| 140 and over | COOKED |
 
 ## License
 
