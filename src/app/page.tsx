@@ -25,12 +25,17 @@ interface SeriesPoint {
 type SeriesMap = Partial<Record<MetricType, SeriesPoint[]>>;
 type DataSource = "supabase" | "public_live" | "historical_seed" | "none";
 
+/** Per-request ceiling so a hung /api/metrics call cannot pin "Loading war room…" forever. */
+const FETCH_TIMEOUT_MS = 12_000;
+
 async function fetchSeries(
   type: MetricType,
   limit = 500
 ): Promise<{ points: SeriesPoint[]; source: DataSource }> {
   try {
-    const res = await fetch(`/api/metrics/${type}?limit=${limit}`);
+    const res = await fetch(`/api/metrics/${type}?limit=${limit}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return { points: [], source: "none" };
     const json = await res.json();
     const source = (json?.source as DataSource) || "none";
@@ -71,17 +76,18 @@ export default function WarRoomDashboard() {
         "buffett_indicator",
         ...SATELLITE_DEFS.map((d) => d.id),
       ];
-      const results = await Promise.all(
+      // allSettled + timed fetchSeries: partial board still renders if some calls hang/fail
+      const settled = await Promise.allSettled(
         types.map(async (t) => [t, await fetchSeries(t)] as const)
       );
       const next: SeriesMap = {};
-      let any = false;
       let sawPublic = false;
       let sawSeed = false;
       let sawSupabase = false;
-      for (const [t, result] of results) {
+      for (const entry of settled) {
+        if (entry.status !== "fulfilled") continue;
+        const [t, result] = entry.value;
         next[t] = result.points;
-        if (result.points.length) any = true;
         if (result.source === "public_live") sawPublic = true;
         if (result.source === "historical_seed") sawSeed = true;
         if (result.source === "supabase") sawSupabase = true;
@@ -97,9 +103,6 @@ export default function WarRoomDashboard() {
               : "none"
       );
       setConfigured(true);
-      if (!any) {
-        setError(null);
-      }
     } catch (err) {
       console.error(err);
       setError("Unable to reach the metrics API.");
