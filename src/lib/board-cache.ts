@@ -7,7 +7,8 @@ import {
 import { RECEIPTS } from "@/lib/verdict";
 
 const STORAGE_KEY = "buffetr.board.v1";
-const MAX_POINTS = 1000;
+/** Long enough for daily yields back to 1976 and daily gold back to 2000. */
+const MAX_POINTS = 20000;
 
 const EMPTY_CACHE: SeriesMap = {};
 const BOARD_METRICS = new Set<string>(RECEIPTS.map((receipt) => receipt.metric));

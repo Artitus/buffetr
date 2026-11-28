@@ -10,3 +10,4 @@ export * from "./crypto";
 export * from "./fear-greed";
 export * from "./cape";
 export * from "./news";
+export * from "./long-history";

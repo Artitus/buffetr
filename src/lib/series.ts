@@ -46,3 +46,15 @@ export function applyLiveSeries(
   }
   return prev;
 }
+
+/** Union by day. `extra` wins when both series print the same day. */
+export function mergeSeries(base: SeriesPoint[], extra: SeriesPoint[]): SeriesPoint[] {
+  if (extra.length === 0) return base;
+  if (base.length === 0) return extra;
+  const byDay = new Map<string, number>();
+  for (const point of base) byDay.set(point.date, point.value);
+  for (const point of extra) byDay.set(point.date, point.value);
+  return [...byDay.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, value]) => ({ date, value }));
+}
