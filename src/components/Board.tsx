@@ -1,18 +1,22 @@
 "use client";
 
-import { startTransition, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { startTransition, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MetricInfo } from "@/components/MetricInfo";
+import { OverlayChart } from "@/components/OverlayChart";
 import { SayingLine } from "@/components/SayingLine";
-import { ReceiptChart } from "@/components/ReceiptChart";
 import {
   getServerBoardCache,
   readBoardCache,
   subscribeBoardCache,
   writeBoardMetric,
 } from "@/lib/board-cache";
+import { METRIC_NOTES } from "@/lib/metric-notes";
+import { buildOverlay, formatCorrelation } from "@/lib/overlay";
 import {
   applyLiveSeries,
   EMPTY_SERIES,
+  mergeSeries,
   normalizeSeries,
   type SeriesMap,
   type SeriesPoint,
@@ -23,7 +27,6 @@ import {
   RECEIPTS,
   arrowFor,
   copySentence,
-  filterByRange,
   parseSlug,
   receiptBySlug,
   stickerNumber,
@@ -33,14 +36,14 @@ import {
 } from "@/lib/verdict";
 
 /** One hung public feed must not outlive this. The board does not wait on it. */
-const FETCH_TIMEOUT_MS = 12_000;
+const FETCH_TIMEOUT_MS = 20_000;
 
 async function fetchSeries(
   type: MetricType,
   signal: AbortSignal
 ): Promise<SeriesPoint[]> {
   try {
-    const res = await fetch(`/api/metrics/${type}?limit=1000`, { signal });
+    const res = await fetch(`/api/metrics/${type}?history=all`, { signal });
     if (!res.ok) return EMPTY_SERIES;
     const json = await res.json();
     return normalizeSeries(json?.data);
@@ -69,12 +72,18 @@ export function Board({
     const seeded: SeriesMap = { ...initialSeries };
     for (const receipt of RECEIPTS) {
       const known = cached[receipt.metric];
-      if (known && known.length >= 2) seeded[receipt.metric] = known;
+      if (known && known.length >= 2) {
+        seeded[receipt.metric] = mergeSeries(seeded[receipt.metric] ?? EMPTY_SERIES, known);
+      }
     }
     return RECEIPTS.reduce(
       (next, receipt) => {
         const fresh = live[receipt.metric];
-        return fresh ? applyLiveSeries(next, receipt.metric, fresh) : next;
+        if (!fresh || fresh.length < 2) return next;
+        return {
+          ...next,
+          [receipt.metric]: mergeSeries(next[receipt.metric] ?? EMPTY_SERIES, fresh),
+        };
       },
       seeded
     );
@@ -117,14 +126,9 @@ export function Board({
   const activeNumber =
     activeValue == null ? "—" : stickerNumber(active.metric, activeValue);
 
-  const chartData = useMemo(
-    () => filterByRange(activePoints, range),
-    [activePoints, range]
-  );
-
-  const formatValue = useCallback(
-    (value: number) => stickerNumber(active.metric, value),
-    [active.metric]
+  const overlay = useMemo(
+    () => buildOverlay(series, range, verdict?.color ?? "#d5dde8"),
+    [range, series, verdict?.color]
   );
 
   const promote = (next: ReceiptSlug) => {
@@ -166,7 +170,7 @@ export function Board({
         <SayingLine band={verdict?.word ?? null} ready />
 
         <div className="relative min-h-0 flex-1">
-          {chartData.length >= 2 ? (
+          {overlay.draw.length >= 1 ? (
             <ErrorBoundary
               fallback={
                 <p className="flex h-full items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
@@ -175,13 +179,36 @@ export function Board({
               }
             >
               <div className="absolute inset-0">
-                <ReceiptChart
-                  data={chartData}
-                  color={verdict?.color ?? "#8b9cb3"}
-                  formatValue={formatValue}
-                  label={active.name}
-                />
+                <OverlayChart lines={overlay.draw} focus={slug} />
               </div>
+              <ol className="pointer-events-none absolute left-3 top-2 z-10 flex max-h-[46%] flex-col gap-0.5 overflow-y-auto font-mono text-[11px] leading-tight sm:left-5 sm:text-xs">
+                {overlay.legend.map((entry) => {
+                  const selected = slug === entry.slug;
+                  return (
+                    <li key={entry.slug} className="pointer-events-auto flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => promote(entry.slug)}
+                        className={`flex items-center gap-1.5 ${
+                          selected ? "text-[var(--wr-fg)]" : "text-[var(--wr-muted)] hover:text-[var(--wr-fg)]"
+                        }`}
+                      >
+                        <span
+                          aria-hidden
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{ background: entry.color }}
+                        />
+                        <span>{entry.name}</span>
+                        <span className="tabular-nums text-[var(--wr-dim)]">
+                          {formatCorrelation(entry.correlation)}
+                        </span>
+                      </button>
+                      <MetricInfo label={entry.name} note={METRIC_NOTES[entry.slug]} />
+                    </li>
+                  );
+                })}
+              </ol>
             </ErrorBoundary>
           ) : (
             <div className="flex h-full items-center justify-center font-mono text-4xl text-[var(--wr-dim)]">
@@ -226,25 +253,34 @@ export function Board({
           const arrow = value == null ? null : arrowFor(points.map((point) => point.value));
           const selected = slug === receipt.slug;
           return (
-            <button
+            <div
               key={receipt.slug}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => promote(receipt.slug)}
-              className={`flex min-w-0 flex-col items-start gap-0.5 px-3 py-2.5 text-left font-mono tabular-nums transition-colors sm:px-4 ${
+              className={`relative flex min-w-0 flex-col items-start px-3 py-2.5 text-left font-mono tabular-nums sm:px-4 ${
                 selected
                   ? "bg-white/10 text-[var(--wr-fg)]"
-                  : "bg-[var(--wr-bg)] text-[var(--wr-dim)] hover:bg-white/5 hover:text-[var(--wr-muted)]"
+                  : "bg-[var(--wr-bg)] text-[var(--wr-dim)]"
               }`}
             >
-              <span className="text-[10px] uppercase tracking-[0.14em]">
-                {receipt.name}
+              <button
+                type="button"
+                aria-pressed={selected}
+                onClick={() => promote(receipt.slug)}
+                className={`flex w-full flex-col items-start gap-0.5 pr-5 text-left ${
+                  selected ? "" : "hover:text-[var(--wr-muted)]"
+                }`}
+              >
+                <span className="text-[10px] uppercase tracking-[0.14em]">
+                  {receipt.name}
+                </span>
+                <span className="text-sm sm:text-base">
+                  {number}
+                  {arrow ? <span aria-hidden> {arrow}</span> : null}
+                </span>
+              </button>
+              <span className="absolute right-1.5 top-2 sm:right-2">
+                <MetricInfo label={receipt.name} note={METRIC_NOTES[receipt.slug]} />
               </span>
-              <span className="text-sm sm:text-base">
-                {number}
-                {arrow ? <span aria-hidden> {arrow}</span> : null}
-              </span>
-            </button>
+            </div>
           );
         })}
       </section>

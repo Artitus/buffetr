@@ -6,6 +6,7 @@ import {
   METRIC_TYPES,
   type MetricType,
 } from "@/lib/supabase";
+import { historyIsComplete, loadFullHistory } from "@/lib/full-history";
 import { loadHistoricalSeed } from "@/lib/seed/load-historical";
 
 export const runtime = "edge";
@@ -70,6 +71,34 @@ export async function GET(
   const latest = searchParams.get("latest") === "true";
   const limit = parseInt(searchParams.get("limit") || "365", 10);
   const cappedLimit = Math.min(limit, 1000);
+
+  if (searchParams.get("history") === "all") {
+    try {
+      const data = await loadFullHistory(metricType);
+      return NextResponse.json(
+        {
+          data,
+          count: data.length,
+          metricType,
+          empty: data.length === 0,
+          source: "history",
+        },
+        {
+          headers: {
+            "Cache-Control": historyIsComplete(metricType, data.length)
+              ? CACHE_CONTROL
+              : "no-store",
+          },
+        }
+      );
+    } catch (error) {
+      console.error(`Error loading full ${metricType} history:`, error);
+      return NextResponse.json(
+        { error: "Failed to fetch metrics" },
+        { status: 500 }
+      );
+    }
+  }
 
   try {
     if (latest) {
