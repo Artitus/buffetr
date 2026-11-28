@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   AreaSeries,
   ColorType,
   createChart,
+  type IChartApi,
+  type ISeriesApi,
   type Time,
 } from "lightweight-charts";
 
@@ -27,62 +29,65 @@ export function ReceiptChart({
   label,
 }: ReceiptChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = containerRef.current;
-    if (!el || data.length < 2) return;
+    if (!el) return;
 
-    const chart = createChart(el, {
-      layout: {
-        background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#8b9cb3",
-        fontFamily: "var(--font-ibm-plex-mono), ui-monospace, monospace",
-        attributionLogo: false,
-      },
-      grid: {
-        vertLines: { color: "rgba(45, 62, 80, 0.35)" },
-        horzLines: { color: "rgba(45, 62, 80, 0.35)" },
-      },
-      width: el.clientWidth,
-      height: el.clientHeight,
-      crosshair: {
-        vertLine: { color: "#5a6d82", labelBackgroundColor: "#1a2332" },
-        horzLine: { color: "#5a6d82", labelBackgroundColor: "#1a2332" },
-      },
-      rightPriceScale: {
-        borderColor: "#2d3e50",
-        scaleMargins: { top: 0.12, bottom: 0.08 },
-      },
-      timeScale: {
-        borderColor: "#2d3e50",
-        timeVisible: false,
-      },
-      handleScroll: { mouseWheel: true, pressedMouseMove: true },
-      handleScale: {
-        axisPressedMouseMove: true,
-        mouseWheel: true,
-        pinch: true,
-      },
-    });
+    let chart: IChartApi;
+    try {
+      chart = createChart(el, {
+        layout: {
+          background: { type: ColorType.Solid, color: "transparent" },
+          textColor: "#8b9cb3",
+          fontFamily: "var(--font-ibm-plex-mono), ui-monospace, monospace",
+          attributionLogo: false,
+        },
+        grid: {
+          vertLines: { color: "rgba(45, 62, 80, 0.35)" },
+          horzLines: { color: "rgba(45, 62, 80, 0.35)" },
+        },
+        width: el.clientWidth,
+        height: el.clientHeight,
+        crosshair: {
+          vertLine: { color: "#5a6d82", labelBackgroundColor: "#1a2332" },
+          horzLine: { color: "#5a6d82", labelBackgroundColor: "#1a2332" },
+        },
+        rightPriceScale: {
+          borderColor: "#2d3e50",
+          scaleMargins: { top: 0.12, bottom: 0.08 },
+        },
+        timeScale: {
+          borderColor: "#2d3e50",
+          timeVisible: false,
+        },
+        handleScroll: { mouseWheel: true, pressedMouseMove: true },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return;
+    }
 
     const series = chart.addSeries(AreaSeries, {
-      lineColor: color,
-      topColor: hexFade(color, 0.35),
-      bottomColor: hexFade(color, 0),
+      lineColor: "#8b9cb3",
+      topColor: hexFade("#8b9cb3", 0.35),
+      bottomColor: hexFade("#8b9cb3", 0),
       lineWidth: 2,
       priceFormat: {
         type: "custom",
-        formatter: (price: number) => formatValue(price),
+        formatter: (price: number) => String(Math.round(price)),
       },
     });
 
-    series.setData(
-      data.map((d) => ({
-        time: d.date.slice(0, 10) as Time,
-        value: d.value,
-      }))
-    );
-    chart.timeScale().fitContent();
+    chartRef.current = chart;
+    seriesRef.current = series;
 
     const observer = new ResizeObserver(() => {
       chart.applyOptions({
@@ -95,7 +100,37 @@ export function ReceiptChart({
     return () => {
       observer.disconnect();
       chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
     };
+  }, []);
+
+  useLayoutEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series || data.length < 2) return;
+
+    series.applyOptions({
+      lineColor: color,
+      topColor: hexFade(color, 0.35),
+      bottomColor: hexFade(color, 0),
+      priceFormat: {
+        type: "custom",
+        formatter: (price: number) => formatValue(price),
+      },
+    });
+
+    try {
+      series.setData(
+        data.map((point) => ({
+          time: point.date.slice(0, 10) as Time,
+          value: point.value,
+        }))
+      );
+      chart.timeScale().fitContent();
+    } catch (error) {
+      console.error(error);
+    }
   }, [color, data, formatValue]);
 
   return (
