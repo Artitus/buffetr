@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { SayingLine } from "@/components/SayingLine";
 import { ReceiptChart } from "@/components/ReceiptChart";
 import {
   getServerBoardCache,
@@ -161,6 +162,8 @@ export function Board({
             {activeNumber}
           </p>
         </div>
+
+        <SayingLine band={verdict?.word ?? null} ready />
 
         <div className="relative min-h-0 flex-1">
           {chartData.length >= 2 ? (
