@@ -156,6 +156,27 @@ export async function upsertMetric(
   }
 }
 
+/** Latest stored day for a series, or null when the table has no row. */
+export async function getLatestRecordedAt(
+  metricType: MetricType
+): Promise<string | null> {
+  try {
+    const { data, error } = await getServiceClient()
+      .from("metrics")
+      .select("recorded_at")
+      .eq("metric_type", metricType)
+      .order("recorded_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data?.recorded_at) return null;
+    return String(data.recorded_at).slice(0, 10);
+  } catch (error) {
+    console.error("Supabase watermark read failed:", error);
+    return null;
+  }
+}
+
 export async function bulkUpsertMetrics(
   metrics: Array<{
     metric_type: MetricType;
@@ -167,22 +188,32 @@ export async function bulkUpsertMetrics(
   if (metrics.length === 0) return true;
 
   try {
-    const formattedMetrics = metrics.map((m) => ({
+    const byKey = new Map<string, (typeof metrics)[number]>();
+    for (const metric of metrics) {
+      byKey.set(
+        `${metric.metric_type}|${metric.recorded_at.toISOString()}`,
+        metric
+      );
+    }
+
+    const formattedMetrics = [...byKey.values()].map((m) => ({
       metric_type: m.metric_type,
       value: m.value,
       recorded_at: m.recorded_at.toISOString(),
       metadata: m.metadata || null,
     }));
 
-    const { error } = await getServiceClient()
-      .from("metrics")
-      .upsert(formattedMetrics, {
-        onConflict: "metric_type,recorded_at",
-      });
-
-    if (error) {
-      console.error("Error bulk upserting metrics:", error);
-      return false;
+    const client = getServiceClient();
+    const chunkSize = 400;
+    for (let i = 0; i < formattedMetrics.length; i += chunkSize) {
+      const { error } = await client.from("metrics").upsert(
+        formattedMetrics.slice(i, i + chunkSize),
+        { onConflict: "metric_type,recorded_at" }
+      );
+      if (error) {
+        console.error("Error bulk upserting metrics:", error);
+        return false;
+      }
     }
 
     return true;
