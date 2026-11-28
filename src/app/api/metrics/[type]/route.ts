@@ -6,11 +6,47 @@ import {
   METRIC_TYPES,
   type MetricType,
 } from "@/lib/supabase";
-import { fetchPublicMetricSeries } from "@/lib/public-metrics";
+import { loadHistoricalSeed } from "@/lib/seed/load-historical";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+const CACHE_CONTROL =
+  "public, s-maxage=3600, stale-while-revalidate=86400";
+
+const SEED_LABEL =
+  "Historical seed (real FRED/market series snapshot) — not mocked; will refresh when public live / cron is available";
+
+function cachedJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": CACHE_CONTROL },
+  });
+}
+
+function toIsoDay(date: string): string {
+  if (date.includes("T")) return date;
+  return `${date}T00:00:00.000Z`;
+}
+
+async function seedPoints(metricType: MetricType, limit: number) {
+  const seed = await loadHistoricalSeed(metricType);
+  if (!seed?.length) return [];
+
+  return [...seed]
+    .filter((point) => Number.isFinite(point.value))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-limit)
+    .map((point, index) => ({
+      id: index + 1,
+      metric_type: metricType,
+      value: point.value,
+      recorded_at: toIsoDay(point.date),
+      metadata: { source: "historical_seed" },
+      created_at: new Date().toISOString(),
+    }));
+}
 
 export async function GET(
   request: Request,
@@ -39,22 +75,22 @@ export async function GET(
     if (latest) {
       const metric = await getLatestMetric(metricType);
       if (metric) {
-        return NextResponse.json({ data: metric, source: "supabase" });
+        return cachedJson({ data: metric, source: "supabase" });
       }
 
-      const pub = await fetchPublicMetricSeries(metricType, cappedLimit);
-      if (pub?.data.length) {
-        const last = pub.data[pub.data.length - 1];
-        return NextResponse.json({
+      const seeded = await seedPoints(metricType, cappedLimit);
+      const last = seeded.at(-1);
+      if (last) {
+        return cachedJson({
           data: last,
-          source: pub.source,
-          label: pub.label,
+          source: "historical_seed",
+          label: SEED_LABEL,
         });
       }
 
-      return NextResponse.json(
+      return cachedJson(
         { error: "No data available", empty: true },
-        { status: 404 }
+        404
       );
     }
 
@@ -66,7 +102,7 @@ export async function GET(
     }
 
     if (metrics.length > 0) {
-      return NextResponse.json({
+      return cachedJson({
         data: metrics,
         count: metrics.length,
         metricType,
@@ -75,21 +111,20 @@ export async function GET(
       });
     }
 
-    const pub = await fetchPublicMetricSeries(metricType, cappedLimit);
-    if (pub?.data.length) {
-      // API historically returns newest-first from Supabase; keep that shape
-      const newestFirst = [...pub.data].reverse();
-      return NextResponse.json({
+    const seeded = await seedPoints(metricType, cappedLimit);
+    if (seeded.length > 0) {
+      const newestFirst = [...seeded].reverse();
+      return cachedJson({
         data: newestFirst,
         count: newestFirst.length,
         metricType,
         empty: false,
-        source: pub.source,
-        label: pub.label,
+        source: "historical_seed",
+        label: SEED_LABEL,
       });
     }
 
-    return NextResponse.json({
+    return cachedJson({
       data: [],
       count: 0,
       metricType,
